@@ -88,23 +88,24 @@
     });
 
     function handleFiles(files) {
-  for (let file of files) {
-    if (!file.type.startsWith("audio/")) continue;
+      for (let file of files) {
+        if (!file.type.startsWith("audio/")) continue;
 
-    const li = document.createElement("li");
-    li.textContent = file.name;
-    li.addEventListener("click", () => playSong({ name: file.name, file }));
-    
-    songList.appendChild(li);
-    // Save uploaded song in sessionStorage
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      uploadedSongs.push({ name: file.name, dataURL: e.target.result });
-      sessionStorage.setItem("uploadedSongs", JSON.stringify(uploadedSongs));
-    };
-    reader.readAsDataURL(file);
-  }
-}
+        const li = document.createElement("li");
+        li.textContent = file.name;
+        li.addEventListener("click", () => playSong({ name: file.name, file }));
+
+        songList.appendChild(li);
+
+        // Save uploaded song in sessionStorage
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          uploadedSongs.push({ name: file.name, dataURL: e.target.result });
+          sessionStorage.setItem("uploadedSongs", JSON.stringify(uploadedSongs));
+        };
+        reader.readAsDataURL(file);
+      }
+    }
 
     function playSong(song) {
       const audioPlayer = document.getElementById("audioPlayer");
