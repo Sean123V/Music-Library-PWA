@@ -109,7 +109,7 @@
       });
     }
 
-    // Save a file to IndexedDB
+    // Save a file to IndexedDB (UPDATED to save cacheUrl)
     function saveSongToDB(file) {
       return new Promise((resolve, reject) => {
         if (!db) {
@@ -126,7 +126,8 @@
             type: file.type,
             size: file.size,
             lastModified: file.lastModified,
-            data: event.target.result // ArrayBuffer
+            data: event.target.result, // ArrayBuffer
+            cacheUrl: file.cacheUrl || null  // ADDED: Save cache URL for PWA
           };
           
           console.log("File converted to ArrayBuffer, size:", songData.data.byteLength, "bytes");
@@ -249,12 +250,26 @@
       return li;
     }
 
-    // Play a song
+    // Play a song (UPDATED for PWA caching)
     function playSong(file) {
       console.log("Playing song:", file.name);
       const audioPlayer = document.getElementById("audioPlayer");
-      const objectURL = URL.createObjectURL(file);
-      audioPlayer.src = objectURL;
+      
+      // Try to use cached URL first, fall back to object URL
+      if (file.cacheUrl) {
+        console.log("Using cached URL:", file.cacheUrl);
+        audioPlayer.src = file.cacheUrl;
+      } else {
+        const objectURL = URL.createObjectURL(file);
+        audioPlayer.src = objectURL;
+        
+        // Clean up URL when done
+        audioPlayer.addEventListener('ended', function cleanup() {
+          URL.revokeObjectURL(objectURL);
+          audioPlayer.removeEventListener('ended', cleanup);
+        }, { once: true });
+      }
+      
       audioPlayer.play();
       
       // Highlight playing song
@@ -264,15 +279,9 @@
           li.classList.add("playing");
         }
       });
-      
-      // Clean up URL when done
-      audioPlayer.addEventListener('ended', function cleanup() {
-        URL.revokeObjectURL(objectURL);
-        audioPlayer.removeEventListener('ended', cleanup);
-      }, { once: true });
     }
 
-    // Handle file uploads
+    // Handle file uploads (UPDATED for PWA caching)
     async function handleFiles(files) {
       console.log("handleFiles called with", files.length, "file(s)");
       
@@ -324,6 +333,39 @@
           
           console.log("✅ Successfully added:", file.name);
           
+          // ========== PWA CACHING ==========
+          // Also cache in Service Worker for offline PWA support
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            try {
+              // Create a unique URL for this cached audio
+              const cacheUrl = `/cached-audio/${Date.now()}-${encodeURIComponent(file.name)}`;
+              
+              // Convert File to blob
+              const blob = new Blob([await file.arrayBuffer()], { type: file.type });
+              
+              // Send to Service Worker for caching
+              navigator.serviceWorker.controller.postMessage({
+                type: 'CACHE_AUDIO',
+                url: cacheUrl,
+                blob: blob,
+                fileName: file.name
+              });
+              
+              console.log("📦 Sent to Service Worker for caching:", file.name);
+              
+              // Store the cache URL with the file for later playback
+              file.cacheUrl = cacheUrl;
+              
+              // Update IndexedDB with the cache URL
+              await saveSongToDB(file); // Save again with cacheUrl
+              
+            } catch (swError) {
+              console.warn("⚠️ Could not cache in Service Worker:", swError);
+              // Non-critical error - file is still saved in IndexedDB
+            }
+          }
+          // =================================
+          
         } catch (error) {
           console.error("❌ Failed to save file:", file.name, error);
           if (error.name === 'QuotaExceededError') {
@@ -359,6 +401,12 @@
             console.log("Loading saved song:", songData.name);
             // Convert ArrayBuffer back to File
             const file = arrayBufferToFile(songData.data, songData.name, songData.type);
+            
+            // ADDED: Restore cacheUrl from IndexedDB
+            if (songData.cacheUrl) {
+              file.cacheUrl = songData.cacheUrl;
+              console.log("Restored cache URL:", songData.cacheUrl);
+            }
             
             // Add to memory array
             uploadedSongs.push({
