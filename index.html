@@ -10,25 +10,53 @@
 
 <header class="app-header">
     <h1>Music Library</h1>
+    <p>Your personal music collection</p>
 </header>
 
 <section class="instructions-section">
+    <h2>Welcome to Your Music Library</h2>
+    
+    <div class="feature-cards">
+        <div class="feature-card">
+            <h3>🎵 Upload Music</h3>
+            <p>Add your own audio files to your personal collection. Supports MP3, WAV, and more.</p>
+        </div>
+        <div class="feature-card">
+            <h3>📋 Create Playlists</h3>
+            <p>Organize your songs into custom playlists for different moods and occasions.</p>
+        </div>
+        <div class="feature-card">
+            <h3>🎧 Play Anywhere</h3>
+            <p>Access your music from any device with a browser. Your music stays in your browser.</p>
+        </div>
+    </div>
+    
     <h2>How to Use This Website</h2>
     <ol class="instructions-list">
         <li>Go to <strong>Upload Songs</strong> to add your music files to the library.</li>
-        <li>Click on a song in the library to play it instantly.</li>
+        <li>Click on any uploaded song to play it instantly.</li>
         <li>Create and manage your own playlists in the <strong>Playlists</strong> section.</li>
-        <li>Use the bottom navigation to quickly move between Home, Upload, and Playlists.</li>
-        <li>Enjoy your music anywhere and anytime directly from the web app!</li>
+        <li>Use the bottom navigation to quickly move between pages.</li>
+        <li>Your music is stored locally in your browser - no account needed!</li>
     </ol>
+    
+    <div class="storage-info">
+        <h3>📊 About Storage</h3>
+        <p>Your songs are stored in your browser's local storage. This means:</p>
+        <ul>
+            <li>✅ No login required - completely private</li>
+            <li>✅ Works offline after initial upload</li>
+            <li>✅ Accessible only from this browser</li>
+            <li>⚠️ Clearing browser data will remove your songs</li>
+        </ul>
+    </div>
 </section>
 
 <div class="bottom-nav">
     <a href="index.html"><button class="active">Home</button></a>
-    <a href="download.html"><button>Upload Songs</button></a>
+    <a href="upload.html"><button>Upload Songs</button></a>
     <a href="playlists.html"><button>Playlists</button></a>
 </div>
 
-<script src="script.js"></script>
 </body>
 </html>

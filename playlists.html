@@ -11,7 +11,7 @@
   <!-- TOP NAV -->
   <div class="top-nav">
     <button class="nav-button" onclick="location.href='index.html'">&larr; Home</button>
-    <button class="nav-button" onclick="location.href='download.html'">Upload Songs</button>
+    <button class="nav-button" onclick="location.href='upload.html'">Upload Songs</button>
   </div>
 
   <header>
@@ -245,6 +245,11 @@
       });
     }
 
+    // Global variables for playlist playback
+    window.currentPlaylist = null;
+    window.currentSongIndex = null;
+    window.playlistPlaying = false;
+
     function renderPlaylists() {
       if (Object.keys(playlists).length === 0) {
         emptyState.style.display = 'block';
@@ -261,25 +266,120 @@
         
         playlistCard.innerHTML = `
           <div class="playlist-header">
-            <h3 class="playlist-title">${name}</h3>
-            <button class="delete-playlist" data-playlist-name="${name}">Delete</button>
+            <div class="playlist-header-left">
+              <h3 class="playlist-title">${name}</h3>
+              <span class="song-count">${playlists[name].length} song${playlists[name].length !== 1 ? 's' : ''}</span>
+            </div>
+            <div class="playlist-header-right">
+              <button class="play-control-btn play-all-btn" data-playlist-name="${name}" title="Play all songs">
+                ▶ Play All
+              </button>
+              <button class="play-control-btn skip-btn" data-playlist-name="${name}" title="Skip to next song">
+                ⏭️ Skip
+              </button>
+              <button class="delete-playlist" data-playlist-name="${name}">Delete</button>
+            </div>
           </div>
           <ul class="playlist-songs">
-            ${playlists[name].map(song => `
-              <li class="song-item" data-song-name="${song.name}">
-                <span>${song.name}</span>
-                <button class="remove-song" data-playlist-name="${name}" data-song-name="${song.name}">×</button>
+            ${playlists[name].map((song, index) => `
+              <li class="song-item" data-song-name="${song.name}" data-song-index="${index}">
+                <span class="song-name">${song.name}</span>
+                <div class="song-actions">
+                  <button class="play-single-btn" data-playlist-name="${name}" data-song-index="${index}" title="Play this song">▶</button>
+                  <button class="remove-song" data-playlist-name="${name}" data-song-name="${song.name}" title="Remove from playlist">×</button>
+                </div>
               </li>
             `).join('')}
           </ul>
+          <div class="playlist-controls" data-playlist-name="${name}" style="display: none;">
+            <div class="now-playing">
+              <span>Now Playing: <strong class="current-song-name"></strong></span>
+              <span class="song-progress">1/${playlists[name].length}</span>
+            </div>
+            <div class="playback-controls">
+              <button class="control-btn prev-btn" title="Previous song">⏮</button>
+              <button class="control-btn pause-btn" title="Pause" style="display: none;">⏸</button>
+              <button class="control-btn play-btn" title="Play">▶</button>
+              <button class="control-btn next-btn" title="Next song">⏭</button>
+              <button class="control-btn stop-btn" title="Stop">⏹</button>
+            </div>
+          </div>
         `;
         
         playlistsContainer.appendChild(playlistCard);
         
-        // Add event listeners for songs in this playlist
+        // Add event listeners
+        const playAllBtn = playlistCard.querySelector('.play-all-btn');
+        const skipBtn = playlistCard.querySelector('.skip-btn');
+        const playControls = playlistCard.querySelector('.playlist-controls');
+        const playBtn = playlistCard.querySelector('.play-btn');
+        const pauseBtn = playlistCard.querySelector('.pause-btn');
+        const prevBtn = playlistCard.querySelector('.prev-btn');
+        const nextBtn = playlistCard.querySelector('.next-btn');
+        const stopBtn = playlistCard.querySelector('.stop-btn');
+        const currentSongName = playlistCard.querySelector('.current-song-name');
+        const songProgress = playlistCard.querySelector('.song-progress');
+        
+        // Play All button
+        playAllBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const playlistName = this.dataset.playlistName;
+          startPlaylistPlayback(playlistName, 0);
+          playControls.style.display = 'block';
+        });
+        
+        // Skip button
+        skipBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const playlistName = this.dataset.playlistName;
+          skipToNextInPlaylist(playlistName);
+        });
+        
+        // Individual song play buttons
+        playlistCard.querySelectorAll('.play-single-btn').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const playlistName = this.dataset.playlistName;
+            const songIndex = parseInt(this.dataset.songIndex);
+            playSongFromPlaylist(playlistName, songIndex);
+          });
+        });
+        
+        // Playback controls
+        playBtn.addEventListener('click', function() {
+          if (window.currentPlaylist && window.currentSongIndex !== undefined) {
+            playSongFromPlaylist(window.currentPlaylist, window.currentSongIndex);
+          }
+        });
+        
+        pauseBtn.addEventListener('click', function() {
+          if (audioPlayer && !audioPlayer.paused) {
+            audioPlayer.pause();
+          }
+        });
+        
+        prevBtn.addEventListener('click', function() {
+          if (window.currentPlaylist && window.currentSongIndex !== undefined) {
+            const newIndex = window.currentSongIndex > 0 ? window.currentSongIndex - 1 : playlists[window.currentPlaylist].length - 1;
+            playSongFromPlaylist(window.currentPlaylist, newIndex);
+          }
+        });
+        
+        nextBtn.addEventListener('click', function() {
+          if (window.currentPlaylist && window.currentSongIndex !== undefined) {
+            skipToNextInPlaylist(window.currentPlaylist);
+          }
+        });
+        
+        stopBtn.addEventListener('click', function() {
+          stopPlaylistPlayback();
+          playControls.style.display = 'none';
+        });
+        
+        // Add event listeners for songs in this playlist (original functionality)
         playlistCard.querySelectorAll('.song-item').forEach(item => {
           item.addEventListener('click', function(e) {
-            if (!e.target.classList.contains('remove-song')) {
+            if (!e.target.classList.contains('remove-song') && !e.target.classList.contains('play-single-btn')) {
               const songName = this.dataset.songName;
               playSong(songName);
             }
@@ -329,6 +429,14 @@
         audioPlayer.src = objectURL;
         audioPlayer.play();
         
+        // Update pause/play buttons in all playlist controls
+        document.querySelectorAll('.pause-btn').forEach(btn => {
+          btn.style.display = 'inline-block';
+        });
+        document.querySelectorAll('.play-btn').forEach(btn => {
+          btn.style.display = 'none';
+        });
+        
         // Highlight playing song
         document.querySelectorAll('.song-item').forEach(item => {
           item.classList.remove('playing');
@@ -351,6 +459,100 @@
 
     function savePlaylists() {
       localStorage.setItem("musicPlaylists", JSON.stringify(playlists));
+    }
+
+    // Playlist playback functions
+    function startPlaylistPlayback(playlistName, startIndex = 0) {
+      window.currentPlaylist = playlistName;
+      window.currentSongIndex = startIndex;
+      window.playlistPlaying = true;
+      playSongFromPlaylist(playlistName, startIndex);
+    }
+
+    function playSongFromPlaylist(playlistName, songIndex) {
+      const playlist = playlists[playlistName];
+      if (!playlist || !playlist[songIndex]) return;
+      
+      const songData = playlist[songIndex];
+      window.currentPlaylist = playlistName;
+      window.currentSongIndex = songIndex;
+      
+      // Update UI
+      document.querySelectorAll('.playlist-controls').forEach(ctrl => {
+        ctrl.style.display = 'none';
+      });
+      
+      const currentCard = document.querySelector(`.playlist-card [data-playlist-name="${playlistName}"]`)?.closest('.playlist-card');
+      if (currentCard) {
+        const controls = currentCard.querySelector('.playlist-controls');
+        const currentSongName = currentCard.querySelector('.current-song-name');
+        const songProgress = currentCard.querySelector('.song-progress');
+        const playBtn = currentCard.querySelector('.play-btn');
+        const pauseBtn = currentCard.querySelector('.pause-btn');
+        
+        if (controls) {
+          controls.style.display = 'block';
+          currentSongName.textContent = songData.name;
+          songProgress.textContent = `${songIndex + 1}/${playlist.length}`;
+          playBtn.style.display = 'none';
+          pauseBtn.style.display = 'inline-block';
+        }
+      }
+      
+      // Play the song
+      playSong(songData.name);
+      
+      // Setup auto-next when song ends
+      audioPlayer.onended = function() {
+        if (window.playlistPlaying) {
+          setTimeout(() => {
+            skipToNextInPlaylist(playlistName);
+          }, 500);
+        }
+      };
+    }
+
+    function skipToNextInPlaylist(playlistName) {
+      const playlist = playlists[playlistName];
+      if (!playlist || playlist.length === 0) return;
+      
+      let nextIndex = window.currentSongIndex !== null ? window.currentSongIndex + 1 : 0;
+      if (nextIndex >= playlist.length) {
+        nextIndex = 0; // Loop back to start
+      }
+      
+      playSongFromPlaylist(playlistName, nextIndex);
+    }
+
+    function stopPlaylistPlayback() {
+      window.playlistPlaying = false;
+      window.currentPlaylist = null;
+      window.currentSongIndex = null;
+      if (audioPlayer) {
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
+      }
+    }
+
+    // Add event listener for audio player pause/play
+    if (audioPlayer) {
+      audioPlayer.addEventListener('pause', function() {
+        document.querySelectorAll('.pause-btn').forEach(btn => {
+          btn.style.display = 'none';
+        });
+        document.querySelectorAll('.play-btn').forEach(btn => {
+          btn.style.display = 'inline-block';
+        });
+      });
+      
+      audioPlayer.addEventListener('play', function() {
+        document.querySelectorAll('.pause-btn').forEach(btn => {
+          btn.style.display = 'inline-block';
+        });
+        document.querySelectorAll('.play-btn').forEach(btn => {
+          btn.style.display = 'none';
+        });
+      });
     }
 
     // Keyboard shortcuts
