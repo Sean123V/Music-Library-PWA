@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download Songs</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- TOP NAV -->
+  <div class="top-nav">
+
+    <div class="nav-left">
+      <button class="nav-button" onclick="location.href='index.html'">
+        &larr; Back to Home
+      </button>
+    </div>
+
+    <div class="nav-right">
+      <button class="nav-button" onclick="location.href='playlists.html'">
+        Go to Playlists &rarr;
+      </button>
+    </div>
+
+  </div>
+
+  <header>
+    <h1>Upload Your Music</h1>
+    <p>Add your own songs to your music library</p>
+  </header>
+
+  <section class="upload-section">
+
+    <!-- DRAG & DROP AREA -->
+    <div id="drop-area">
+      <h3>Drag & Drop Songs Here</h3>
+      <p>or click to upload</p>
+      <input type="file" id="fileInput" accept="audio/*" multiple>
+    </div>
+
+    <!-- LIST OF UPLOADED SONGS -->
+    <div class="uploaded-list">
+      <h2>Your Uploaded Songs</h2>
+      <ul id="songList"></ul>
+    </div>
+
+    <!-- AUDIO PLAYER -->
+    <div class="audio-player-container">
+      <h2>Now Playing</h2>
+      <audio id="audioPlayer" controls></audio>
+    </div>
+
+  </section>
+
+  <script>
+    let dropArea = document.getElementById("drop-area");
+    let fileInput = document.getElementById("fileInput");
+    let songList = document.getElementById("songList");
+
+    dropArea.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
+
+    dropArea.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropArea.classList.add("highlight");
+    });
+
+    dropArea.addEventListener("dragleave", () => {
+      dropArea.classList.remove("highlight");
+    });
+
+    dropArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropArea.classList.remove("highlight");
+      handleFiles(e.dataTransfer.files);
+    });
+
+    function handleFiles(files) {
+      for (let file of files) {
+        if (file.type.startsWith("audio/")) {
+          let li = document.createElement("li");
+          li.textContent = file.name;
+
+          li.addEventListener("click", () => {
+            const audioPlayer = document.getElementById("audioPlayer");
+            audioPlayer.src = URL.createObjectURL(file);
+            audioPlayer.play();
+
+            document.querySelectorAll("#songList li")
+              .forEach(li => li.classList.remove("playing"));
+
+            li.classList.add("playing");
+          });
+
+          songList.appendChild(li);
+        }
+      }
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playlists</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- TOP NAV -->
+  <div class="top-nav">
+    <button class="nav-button" onclick="location.href='index.html'">&larr; Home</button>
+    <button class="nav-button" onclick="location.href='download.html'">Upload Songs</button>
+  </div>
+
+  <header>
+    <h1>Your Playlists</h1>
+    <p>Organize your favorite tracks</p>
+  </header>
+
+  <section class="playlist-section">
+    <h2>Create New Playlist</h2>
+    <input type="text" id="newPlaylistName" placeholder="Enter playlist name">
+    <button id="createPlaylistBtn">Create Playlist</button>
+
+    <div id="playlistsContainer" class="music-grid">
+      <!-- Dynamic playlists will appear here -->
+    </div>
+  </section>
+
+  <section class="uploaded-songs-section">
+    <h2>Available Songs</h2>
+    <ul id="uploadedSongsList"></ul>
+  </section>
+
+  <div class="audio-player-container">
+    <h2>Now Playing</h2>
+    <audio id="audioPlayer" controls></audio>
+  </div>
+
+  <script>
+    // Fetch uploaded songs from localStorage
+    const uploadedSongs = JSON.parse(localStorage.getItem('uploadedSongs')) || [];
+    const uploadedSongsList = document.getElementById('uploadedSongsList');
+    const playlistsContainer = document.getElementById('playlistsContainer');
+    const audioPlayer = document.getElementById('audioPlayer');
+
+    // Load playlists from localStorage
+    let playlists = JSON.parse(localStorage.getItem('playlists')) || {};
+
+    // Display uploaded songs
+    function displayUploadedSongs() {
+      uploadedSongsList.innerHTML = '';
+      uploadedSongs.forEach((song) => {
+        const li = document.createElement('li');
+        li.textContent = song.name;
+        li.addEventListener('click', () => {
+          audioPlayer.src = song.url;
+          audioPlayer.play();
+        });
+        uploadedSongsList.appendChild(li);
+      });
+    }
+
+    // Display playlists dynamically
+    function displayPlaylists() {
+      playlistsContainer.innerHTML = '';
+      for (let playlistName in playlists) {
+        const div = document.createElement('div');
+        div.className = 'song-card';
+
+        const title = document.createElement('h3');
+        title.textContent = playlistName;
+        div.appendChild(title);
+
+        const songList = document.createElement('ul');
+        playlists[playlistName].forEach(song => {
+          const li = document.createElement('li');
+          li.textContent = song.name;
+          li.addEventListener('click', () => {
+            audioPlayer.src = song.url;
+            audioPlayer.play();
+          });
+          songList.appendChild(li);
+        });
+        div.appendChild(songList);
+
+        const addSongBtn = document.createElement('button');
+        addSongBtn.textContent = 'Add Song';
+        addSongBtn.style.marginTop = '10px';
+        addSongBtn.addEventListener('click', () => addSongToPlaylist(playlistName));
+        div.appendChild(addSongBtn);
+
+        playlistsContainer.appendChild(div);
+      }
+    }
+
+    // Create new playlist
+    document.getElementById('createPlaylistBtn').addEventListener('click', () => {
+      const name = document.getElementById('newPlaylistName').value.trim();
+      if (!name) return alert('Enter a playlist name!');
+      if (playlists[name]) return alert('Playlist already exists!');
+      playlists[name] = [];
+      localStorage.setItem('playlists', JSON.stringify(playlists));
+      displayPlaylists();
+      document.getElementById('newPlaylistName').value = '';
+    });
+
+    // Add song to a playlist
+    function addSongToPlaylist(playlistName) {
+      const songName = prompt('Enter exact song name to add:');
+      const song = uploadedSongs.find(s => s.name === songName);
+      if (!song) return alert('Song not found!');
+      playlists[playlistName].push(song);
+      localStorage.setItem('playlists', JSON.stringify(playlists));
+      displayPlaylists();
+    }
+
+    // Initial display
+    displayUploadedSongs();
+    displayPlaylists();
+  </script>
+
+</body>
+</html>
