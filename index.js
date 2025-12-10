@@ -46,6 +46,15 @@ app.get("/playlists.html", function (req, res) {
     res.sendFile(path.join(__dirname, "public/playlists.html"));
 });
 
+// PWA ROUTES - ADDED FOR PROGRESSIVE WEB APP
+app.get('/manifest.json', function (req, res) {
+    res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
+});
+
+app.get('/sw.js', function (req, res) {
+    res.sendFile(path.join(__dirname, 'public', 'sw.js'));
+});
+
 // Optional: Redirect for any .html request to your existing pages
 app.get("/*.html", function (req, res) {
     const requestedFile = req.path.substring(1); // Remove leading slash
