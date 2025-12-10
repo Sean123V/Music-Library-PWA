@@ -22,25 +22,36 @@
   <section class="upload-section">
 
     <!-- CREATE PLAYLIST -->
-    <div>
+    <div class="playlist-control-card">
       <h2>Create a Playlist</h2>
-      <input type="text" id="playlistNameInput" placeholder="Enter playlist name">
-      <button id="createPlaylistBtn" class="nav-button">Create Playlist</button>
+      <div class="input-group">
+        <input type="text" id="playlistNameInput" placeholder="Enter playlist name" class="styled-input">
+        <button id="createPlaylistBtn" class="cyber-button">Create Playlist</button>
+      </div>
     </div>
 
     <!-- ADD SONG TO PLAYLIST -->
-    <div style="margin-top: 20px;">
+    <div class="playlist-control-card">
       <h2>Add Song to Playlist</h2>
-      <input type="text" id="songSearchInput" placeholder="Type song name">
-      <select id="playlistSelect">
-        <option value="">Select a playlist</option>
-      </select>
-      <button id="addSongBtn" class="nav-button">Add Song</button>
+      <div class="input-group">
+        <input type="text" id="songSearchInput" placeholder="Type song name" class="styled-input">
+        <select id="playlistSelect" class="styled-select">
+          <option value="">Select a playlist</option>
+        </select>
+        <button id="addSongBtn" class="cyber-button">Add Song</button>
+      </div>
+      <div id="songSuggestions" class="suggestions-box"></div>
     </div>
 
     <!-- PLAYLIST DISPLAY -->
-    <div id="playlistsContainer" style="margin-top: 30px;">
-      <!-- Playlists will appear here -->
+    <div class="playlists-display">
+      <h2>Your Playlists</h2>
+      <div id="playlistsContainer" class="playlists-grid">
+        <!-- Playlists will appear here -->
+        <div class="empty-state" id="emptyState">
+          <p>No playlists yet. Create your first one!</p>
+        </div>
+      </div>
     </div>
 
   </section>
@@ -60,17 +71,55 @@
     const playlistSelect = document.getElementById("playlistSelect");
     const playlistsContainer = document.getElementById("playlistsContainer");
     const audioPlayer = document.getElementById("audioPlayer");
+    const songSuggestions = document.getElementById("songSuggestions");
+    const emptyState = document.getElementById("emptyState");
 
-    // Store playlists in memory (no persistence after reload)
-    let playlists = {};
+    // Store playlists in localStorage for persistence
+    let playlists = JSON.parse(localStorage.getItem("musicPlaylists") || "{}");
 
-    // Load uploaded songs from download page (sessionStorage)
-    let uploadedSongs = sessionStorage.getItem("uploadedSongs");
-    if (uploadedSongs) {
-      uploadedSongs = JSON.parse(uploadedSongs); // array of {name, dataURL}
-    } else {
-      uploadedSongs = [];
+    // Load uploaded songs from IndexedDB
+    let availableSongs = [];
+
+    // Initialize IndexedDB connection
+    function initIndexedDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open('MusicAppDB', 1);
+        
+        request.onsuccess = function(event) {
+          const db = event.target.result;
+          const transaction = db.transaction(['uploadedSongs'], 'readonly');
+          const store = transaction.objectStore('uploadedSongs');
+          const getAllRequest = store.getAll();
+          
+          getAllRequest.onsuccess = function() {
+            availableSongs = getAllRequest.result || [];
+            console.log("Loaded", availableSongs.length, "songs from IndexedDB");
+            resolve();
+          };
+          
+          getAllRequest.onerror = function() {
+            reject("Failed to load songs from IndexedDB");
+          };
+        };
+        
+        request.onerror = function(event) {
+          reject("Failed to open IndexedDB");
+        };
+      });
     }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', async function() {
+      try {
+        await initIndexedDB();
+        updatePlaylistSelect();
+        renderPlaylists();
+        setupSongSearch();
+      } catch (error) {
+        console.error("Initialization error:", error);
+        alert("Could not load uploaded songs. Make sure you've uploaded some songs first.");
+      }
+    });
 
     // Create playlist
     createPlaylistBtn.addEventListener("click", () => {
@@ -83,16 +132,28 @@
         alert("Playlist already exists.");
         return;
       }
+      
       playlists[name] = [];
+      savePlaylists();
       updatePlaylistSelect();
       renderPlaylists();
       playlistNameInput.value = "";
+      
+      // Show success feedback
+      const originalText = createPlaylistBtn.textContent;
+      createPlaylistBtn.textContent = "✓ Created!";
+      createPlaylistBtn.style.background = "linear-gradient(145deg, #00ff88, #00cc66)";
+      setTimeout(() => {
+        createPlaylistBtn.textContent = originalText;
+        createPlaylistBtn.style.background = "linear-gradient(145deg, #00aaa5, #00fff7)";
+      }, 1500);
     });
 
     // Add song to playlist
     addSongBtn.addEventListener("click", () => {
       const playlistName = playlistSelect.value;
-      const searchName = songSearchInput.value.trim().toLowerCase();
+      const searchName = songSearchInput.value.trim();
+      
       if (!playlistName) {
         alert("Please select a playlist.");
         return;
@@ -102,17 +163,77 @@
         return;
       }
 
-      // Find song by name (case-insensitive, substring match)
-      const song = uploadedSongs.find(s => s.name.toLowerCase().includes(searchName));
+      // Find song by exact name match
+      const song = availableSongs.find(s => s.name === searchName);
       if (!song) {
-        alert("Song not found in uploaded songs.");
+        alert(`Song "${searchName}" not found. Make sure you've uploaded it first.`);
+        return;
+      }
+
+      // Check if song already in playlist
+      if (playlists[playlistName].some(s => s.name === song.name)) {
+        alert(`"${song.name}" is already in this playlist.`);
         return;
       }
 
       playlists[playlistName].push(song);
+      savePlaylists();
       renderPlaylists();
       songSearchInput.value = "";
+      songSuggestions.style.display = 'none';
+      
+      // Show success feedback
+      const originalText = addSongBtn.textContent;
+      addSongBtn.textContent = "✓ Added!";
+      addSongBtn.style.background = "linear-gradient(145deg, #00ff88, #00cc66)";
+      setTimeout(() => {
+        addSongBtn.textContent = originalText;
+        addSongBtn.style.background = "linear-gradient(145deg, #00aaa5, #00fff7)";
+      }, 1500);
     });
+
+    // Setup song search with suggestions
+    function setupSongSearch() {
+      songSearchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        if (query.length === 0) {
+          songSuggestions.style.display = 'none';
+          return;
+        }
+        
+        const filtered = availableSongs.filter(song => 
+          song.name.toLowerCase().includes(query)
+        ).slice(0, 5); // Show max 5 suggestions
+        
+        if (filtered.length === 0) {
+          songSuggestions.style.display = 'none';
+          return;
+        }
+        
+        songSuggestions.innerHTML = filtered.map(song => `
+          <div class="suggestion-item" data-song-name="${song.name}">
+            ${song.name}
+          </div>
+        `).join('');
+        
+        songSuggestions.style.display = 'block';
+        
+        // Add click listeners to suggestions
+        songSuggestions.querySelectorAll('.suggestion-item').forEach(item => {
+          item.addEventListener('click', function() {
+            songSearchInput.value = this.dataset.songName;
+            songSuggestions.style.display = 'none';
+          });
+        });
+      });
+      
+      // Hide suggestions when clicking elsewhere
+      document.addEventListener('click', function(e) {
+        if (!songSearchInput.contains(e.target) && !songSuggestions.contains(e.target)) {
+          songSuggestions.style.display = 'none';
+        }
+      });
+    }
 
     function updatePlaylistSelect() {
       playlistSelect.innerHTML = "<option value=''>Select a playlist</option>";
@@ -125,41 +246,125 @@
     }
 
     function renderPlaylists() {
-      playlistsContainer.innerHTML = "";
+      if (Object.keys(playlists).length === 0) {
+        emptyState.style.display = 'block';
+        playlistsContainer.innerHTML = '<div class="empty-state" id="emptyState"><p>No playlists yet. Create your first one!</p></div>';
+        return;
+      }
+      
+      emptyState.style.display = 'none';
+      playlistsContainer.innerHTML = '';
+      
       Object.keys(playlists).forEach(name => {
-        const playlistDiv = document.createElement("div");
-        playlistDiv.style.marginBottom = "20px";
-
-        const title = document.createElement("h3");
-        title.textContent = name;
-        playlistDiv.appendChild(title);
-
-        const ul = document.createElement("ul");
-        playlists[name].forEach(song => {
-          const li = document.createElement("li");
-          li.textContent = song.name;
-          li.style.cursor = "pointer";
-          li.addEventListener("click", () => {
-            audioPlayer.src = song.dataURL;
-            audioPlayer.play();
+        const playlistCard = document.createElement("div");
+        playlistCard.className = "playlist-card";
+        
+        playlistCard.innerHTML = `
+          <div class="playlist-header">
+            <h3 class="playlist-title">${name}</h3>
+            <button class="delete-playlist" data-playlist-name="${name}">Delete</button>
+          </div>
+          <ul class="playlist-songs">
+            ${playlists[name].map(song => `
+              <li class="song-item" data-song-name="${song.name}">
+                <span>${song.name}</span>
+                <button class="remove-song" data-playlist-name="${name}" data-song-name="${song.name}">×</button>
+              </li>
+            `).join('')}
+          </ul>
+        `;
+        
+        playlistsContainer.appendChild(playlistCard);
+        
+        // Add event listeners for songs in this playlist
+        playlistCard.querySelectorAll('.song-item').forEach(item => {
+          item.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('remove-song')) {
+              const songName = this.dataset.songName;
+              playSong(songName);
+            }
           });
-          ul.appendChild(li);
         });
-        playlistDiv.appendChild(ul);
-        playlistsContainer.appendChild(playlistDiv);
+        
+        // Add event listener for delete playlist button
+        playlistCard.querySelector('.delete-playlist').addEventListener('click', function(e) {
+          e.stopPropagation();
+          const playlistName = this.dataset.playlistName;
+          if (confirm(`Delete playlist "${playlistName}"?`)) {
+            delete playlists[playlistName];
+            savePlaylists();
+            updatePlaylistSelect();
+            renderPlaylists();
+          }
+        });
+        
+        // Add event listeners for remove song buttons
+        playlistCard.querySelectorAll('.remove-song').forEach(button => {
+          button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const playlistName = this.dataset.playlistName;
+            const songName = this.dataset.songName;
+            
+            playlists[playlistName] = playlists[playlistName].filter(s => s.name !== songName);
+            savePlaylists();
+            renderPlaylists();
+          });
+        });
       });
     }
 
-    // Prepare uploadedSongs in sessionStorage for playlist page
-    // This code should also be in download page after adding songs
-    if (!sessionStorage.getItem("uploadedSongs")) {
-      const songListItems = document.querySelectorAll("#songList li");
-      const songsArray = Array.from(songListItems).map(li => ({
-        name: li.textContent,
-        dataURL: null
-      }));
-      sessionStorage.setItem("uploadedSongs", JSON.stringify(songsArray));
+    async function playSong(songName) {
+      try {
+        // Find song in available songs
+        const songData = availableSongs.find(s => s.name === songName);
+        if (!songData) {
+          alert("Song data not found. The song may have been deleted.");
+          return;
+        }
+        
+        // Convert ArrayBuffer to Blob and create Object URL
+        const blob = new Blob([songData.data], { type: songData.type });
+        const objectURL = URL.createObjectURL(blob);
+        
+        audioPlayer.src = objectURL;
+        audioPlayer.play();
+        
+        // Highlight playing song
+        document.querySelectorAll('.song-item').forEach(item => {
+          item.classList.remove('playing');
+          if (item.dataset.songName === songName) {
+            item.classList.add('playing');
+          }
+        });
+        
+        // Clean up URL when done
+        audioPlayer.addEventListener('ended', function cleanup() {
+          URL.revokeObjectURL(objectURL);
+          audioPlayer.removeEventListener('ended', cleanup);
+        }, { once: true });
+        
+      } catch (error) {
+        console.error("Error playing song:", error);
+        alert("Could not play song. There might be an issue with the audio file.");
+      }
     }
+
+    function savePlaylists() {
+      localStorage.setItem("musicPlaylists", JSON.stringify(playlists));
+    }
+
+    // Keyboard shortcuts
+    playlistNameInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        createPlaylistBtn.click();
+      }
+    });
+    
+    songSearchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        addSongBtn.click();
+      }
+    });
   </script>
 
 </body>
