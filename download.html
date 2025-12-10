@@ -54,9 +54,20 @@
   </section>
 
   <script>
-    let dropArea = document.getElementById("drop-area");
-    let fileInput = document.getElementById("fileInput");
-    let songList = document.getElementById("songList");
+    const dropArea = document.getElementById("drop-area");
+    const fileInput = document.getElementById("fileInput");
+    const songList = document.getElementById("songList");
+
+    // Array to hold uploaded songs in session memory
+    let uploadedSongs = JSON.parse(sessionStorage.getItem("uploadedSongs") || "[]");
+
+    // Load uploaded songs on page load
+    uploadedSongs.forEach(s => {
+      const li = document.createElement("li");
+      li.textContent = s.name;
+      li.addEventListener("click", () => playSong(s));
+      songList.appendChild(li);
+    });
 
     dropArea.addEventListener("click", () => fileInput.click());
     fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
@@ -78,24 +89,47 @@
 
     function handleFiles(files) {
       for (let file of files) {
-        if (file.type.startsWith("audio/")) {
-          let li = document.createElement("li");
-          li.textContent = file.name;
+        if (!file.type.startsWith("audio/")) continue;
 
-          li.addEventListener("click", () => {
-            const audioPlayer = document.getElementById("audioPlayer");
-            audioPlayer.src = URL.createObjectURL(file);
-            audioPlayer.play();
+        const li = document.createElement("li");
+        li.textContent = file.name;
+        li.addEventListener("click", () => playSong({ name: file.name, file }));
 
-            document.querySelectorAll("#songList li")
-              .forEach(li => li.classList.remove("playing"));
+        songList.appendChild(li);
 
-            li.classList.add("playing");
-          });
-
-          songList.appendChild(li);
-        }
+        // Save uploaded song in sessionStorage
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          uploadedSongs.push({ name: file.name, dataURL: e.target.result });
+          sessionStorage.setItem("uploadedSongs", JSON.stringify(uploadedSongs));
+        };
+        reader.readAsDataURL(file);
       }
+    }
+
+    function playSong(song) {
+      const audioPlayer = document.getElementById("audioPlayer");
+
+      if (song.file) {
+        audioPlayer.src = URL.createObjectURL(song.file);
+      } else if (song.dataURL) {
+        const blob = dataURLtoBlob(song.dataURL);
+        audioPlayer.src = URL.createObjectURL(blob);
+      }
+
+      audioPlayer.play();
+
+      document.querySelectorAll("#songList li").forEach(li => li.classList.remove("playing"));
+      [...songList.children].find(li => li.textContent === song.name)?.classList.add("playing");
+    }
+
+    function dataURLtoBlob(dataURL) {
+      const byteString = atob(dataURL.split(',')[1]);
+      const mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+      return new Blob([ab], { type: mimeString });
     }
   </script>
 

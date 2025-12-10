@@ -16,110 +16,150 @@
 
   <header>
     <h1>Your Playlists</h1>
-    <p>Organize your favorite tracks</p>
+    <p>Create playlists from your uploaded songs</p>
   </header>
 
-  <section class="playlist-section">
-    <h2>Create New Playlist</h2>
-    <input type="text" id="newPlaylistName" placeholder="Enter playlist name">
-    <button id="createPlaylistBtn">Create Playlist</button>
+  <section class="upload-section">
 
-    <div id="playlistsContainer" class="music-grid">
-      <!-- Dynamic playlists will appear here -->
+    <!-- CREATE PLAYLIST -->
+    <div>
+      <h2>Create a Playlist</h2>
+      <input type="text" id="playlistNameInput" placeholder="Enter playlist name">
+      <button id="createPlaylistBtn" class="nav-button">Create Playlist</button>
     </div>
+
+    <!-- ADD SONG TO PLAYLIST -->
+    <div style="margin-top: 20px;">
+      <h2>Add Song to Playlist</h2>
+      <input type="text" id="songSearchInput" placeholder="Type song name">
+      <select id="playlistSelect">
+        <option value="">Select a playlist</option>
+      </select>
+      <button id="addSongBtn" class="nav-button">Add Song</button>
+    </div>
+
+    <!-- PLAYLIST DISPLAY -->
+    <div id="playlistsContainer" style="margin-top: 30px;">
+      <!-- Playlists will appear here -->
+    </div>
+
   </section>
 
-  <section class="uploaded-songs-section">
-    <h2>Available Songs</h2>
-    <ul id="uploadedSongsList"></ul>
-  </section>
-
+  <!-- AUDIO PLAYER -->
   <div class="audio-player-container">
     <h2>Now Playing</h2>
     <audio id="audioPlayer" controls></audio>
   </div>
 
   <script>
-    // Fetch uploaded songs from localStorage
-    const uploadedSongs = JSON.parse(localStorage.getItem('uploadedSongs')) || [];
-    const uploadedSongsList = document.getElementById('uploadedSongsList');
-    const playlistsContainer = document.getElementById('playlistsContainer');
-    const audioPlayer = document.getElementById('audioPlayer');
+    // Grab DOM elements
+    const playlistNameInput = document.getElementById("playlistNameInput");
+    const createPlaylistBtn = document.getElementById("createPlaylistBtn");
+    const songSearchInput = document.getElementById("songSearchInput");
+    const addSongBtn = document.getElementById("addSongBtn");
+    const playlistSelect = document.getElementById("playlistSelect");
+    const playlistsContainer = document.getElementById("playlistsContainer");
+    const audioPlayer = document.getElementById("audioPlayer");
 
-    // Load playlists from localStorage
-    let playlists = JSON.parse(localStorage.getItem('playlists')) || {};
+    // Store playlists in memory (no persistence after reload)
+    let playlists = {};
 
-    // Display uploaded songs
-    function displayUploadedSongs() {
-      uploadedSongsList.innerHTML = '';
-      uploadedSongs.forEach((song) => {
-        const li = document.createElement('li');
-        li.textContent = song.name;
-        li.addEventListener('click', () => {
-          audioPlayer.src = song.url;
-          audioPlayer.play();
-        });
-        uploadedSongsList.appendChild(li);
+    // Load uploaded songs from download page (sessionStorage)
+    let uploadedSongs = sessionStorage.getItem("uploadedSongs");
+    if (uploadedSongs) {
+      uploadedSongs = JSON.parse(uploadedSongs); // array of {name, dataURL}
+    } else {
+      uploadedSongs = [];
+    }
+
+    // Create playlist
+    createPlaylistBtn.addEventListener("click", () => {
+      const name = playlistNameInput.value.trim();
+      if (!name) {
+        alert("Please enter a playlist name.");
+        return;
+      }
+      if (playlists[name]) {
+        alert("Playlist already exists.");
+        return;
+      }
+      playlists[name] = [];
+      updatePlaylistSelect();
+      renderPlaylists();
+      playlistNameInput.value = "";
+    });
+
+    // Add song to playlist
+    addSongBtn.addEventListener("click", () => {
+      const playlistName = playlistSelect.value;
+      const searchName = songSearchInput.value.trim().toLowerCase();
+      if (!playlistName) {
+        alert("Please select a playlist.");
+        return;
+      }
+      if (!searchName) {
+        alert("Please type a song name.");
+        return;
+      }
+
+      // Find song by name (case-insensitive, substring match)
+      const song = uploadedSongs.find(s => s.name.toLowerCase().includes(searchName));
+      if (!song) {
+        alert("Song not found in uploaded songs.");
+        return;
+      }
+
+      playlists[playlistName].push(song);
+      renderPlaylists();
+      songSearchInput.value = "";
+    });
+
+    function updatePlaylistSelect() {
+      playlistSelect.innerHTML = "<option value=''>Select a playlist</option>";
+      Object.keys(playlists).forEach(name => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        playlistSelect.appendChild(option);
       });
     }
 
-    // Display playlists dynamically
-    function displayPlaylists() {
-      playlistsContainer.innerHTML = '';
-      for (let playlistName in playlists) {
-        const div = document.createElement('div');
-        div.className = 'song-card';
+    function renderPlaylists() {
+      playlistsContainer.innerHTML = "";
+      Object.keys(playlists).forEach(name => {
+        const playlistDiv = document.createElement("div");
+        playlistDiv.style.marginBottom = "20px";
 
-        const title = document.createElement('h3');
-        title.textContent = playlistName;
-        div.appendChild(title);
+        const title = document.createElement("h3");
+        title.textContent = name;
+        playlistDiv.appendChild(title);
 
-        const songList = document.createElement('ul');
-        playlists[playlistName].forEach(song => {
-          const li = document.createElement('li');
+        const ul = document.createElement("ul");
+        playlists[name].forEach(song => {
+          const li = document.createElement("li");
           li.textContent = song.name;
-          li.addEventListener('click', () => {
-            audioPlayer.src = song.url;
+          li.style.cursor = "pointer";
+          li.addEventListener("click", () => {
+            audioPlayer.src = song.dataURL;
             audioPlayer.play();
           });
-          songList.appendChild(li);
+          ul.appendChild(li);
         });
-        div.appendChild(songList);
-
-        const addSongBtn = document.createElement('button');
-        addSongBtn.textContent = 'Add Song';
-        addSongBtn.style.marginTop = '10px';
-        addSongBtn.addEventListener('click', () => addSongToPlaylist(playlistName));
-        div.appendChild(addSongBtn);
-
-        playlistsContainer.appendChild(div);
-      }
+        playlistDiv.appendChild(ul);
+        playlistsContainer.appendChild(playlistDiv);
+      });
     }
 
-    // Create new playlist
-    document.getElementById('createPlaylistBtn').addEventListener('click', () => {
-      const name = document.getElementById('newPlaylistName').value.trim();
-      if (!name) return alert('Enter a playlist name!');
-      if (playlists[name]) return alert('Playlist already exists!');
-      playlists[name] = [];
-      localStorage.setItem('playlists', JSON.stringify(playlists));
-      displayPlaylists();
-      document.getElementById('newPlaylistName').value = '';
-    });
-
-    // Add song to a playlist
-    function addSongToPlaylist(playlistName) {
-      const songName = prompt('Enter exact song name to add:');
-      const song = uploadedSongs.find(s => s.name === songName);
-      if (!song) return alert('Song not found!');
-      playlists[playlistName].push(song);
-      localStorage.setItem('playlists', JSON.stringify(playlists));
-      displayPlaylists();
+    // Prepare uploadedSongs in sessionStorage for playlist page
+    // This code should also be in download page after adding songs
+    if (!sessionStorage.getItem("uploadedSongs")) {
+      const songListItems = document.querySelectorAll("#songList li");
+      const songsArray = Array.from(songListItems).map(li => ({
+        name: li.textContent,
+        dataURL: null
+      }));
+      sessionStorage.setItem("uploadedSongs", JSON.stringify(songsArray));
     }
-
-    // Initial display
-    displayUploadedSongs();
-    displayPlaylists();
   </script>
 
 </body>
