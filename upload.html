@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Upload Your Music</title>
   <link rel="stylesheet" href="style.css">
-
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Upload Your Music</title>
-  <link rel="stylesheet" href="style.css">
   
   <!-- PWA Tags -->
   <link rel="manifest" href="/manifest.json">
@@ -23,19 +18,19 @@
 </head>
 <body>
 
-  <!-- TOP NAV -->
-  <<div class="nav-left">
-    <button class="nav-button" onclick="window.location.href='/'">
+  <!-- TOP NAV - FIXED -->
+  <div class="top-nav">
+    <div class="nav-left">
+      <button class="nav-button" onclick="window.location.href='/'">
         &larr; Back to Home
-    </button>
-</div>
+      </button>
+    </div>
 
-<div class="nav-right">
-    <button class="nav-button" onclick="window.location.href='/playlists.html'">
+    <div class="nav-right">
+      <button class="nav-button" onclick="window.location.href='/playlists.html'">
         Go to Playlists &rarr;
-    </button>
-</div>
-
+      </button>
+    </div>
   </div>
 
   <header>
@@ -67,6 +62,10 @@
   </section>
 
   <script>
+    // DEBUG: Add this first to see what's happening
+    console.log("=== UPLOAD PAGE LOADING ===");
+    console.log("IndexedDB supported:", !!window.indexedDB);
+
     // IndexedDB Configuration
     const DB_NAME = 'MusicAppDB';
     const DB_VERSION = 1;
@@ -78,26 +77,34 @@
     // Initialize IndexedDB
     function initDB() {
       return new Promise((resolve, reject) => {
+        console.log("Opening IndexedDB...");
         const request = indexedDB.open(DB_NAME, DB_VERSION);
         
         request.onerror = function(event) {
-          console.error("IndexedDB error:", event.target.error);
+          console.error("❌ IndexedDB error:", event.target.error);
           reject(event.target.error);
         };
         
         request.onsuccess = function(event) {
           db = event.target.result;
-          console.log("IndexedDB opened successfully");
+          console.log("✅ IndexedDB opened successfully");
+          console.log("Database name:", db.name);
+          console.log("Database version:", db.version);
           resolve();
         };
         
         request.onupgradeneeded = function(event) {
           const db = event.target.result;
+          console.log("IndexedDB upgrade needed, creating store...");
           if (!db.objectStoreNames.contains(STORE_NAME)) {
-            // Create object store with name as key
             const store = db.createObjectStore(STORE_NAME, { keyPath: 'name' });
-            console.log("Created object store:", STORE_NAME);
+            console.log("✅ Created object store:", STORE_NAME);
           }
+        };
+        
+        request.onblocked = function(event) {
+          console.error("IndexedDB blocked (another tab has it open)");
+          reject("Database blocked by another tab");
         };
       });
     }
@@ -110,6 +117,8 @@
           return;
         }
         
+        console.log("Saving to IndexedDB:", file.name, "size:", file.size);
+        
         const reader = new FileReader();
         reader.onload = function(event) {
           const songData = {
@@ -120,24 +129,31 @@
             data: event.target.result // ArrayBuffer
           };
           
+          console.log("File converted to ArrayBuffer, size:", songData.data.byteLength, "bytes");
+          
           const transaction = db.transaction([STORE_NAME], 'readwrite');
           const store = transaction.objectStore(STORE_NAME);
           const request = store.put(songData);
           
           request.onsuccess = function() {
-            console.log("Saved to IndexedDB:", file.name);
+            console.log("✅ Saved to IndexedDB:", file.name);
             resolve();
           };
           
           request.onerror = function(event) {
-            console.error("Error saving to IndexedDB:", event.target.error);
+            console.error("❌ Error saving to IndexedDB:", event.target.error);
             reject(event.target.error);
           };
         };
         
         reader.onerror = function(event) {
-          console.error("FileReader error:", event.target.error);
+          console.error("❌ FileReader error:", event.target.error);
           reject(event.target.error);
+        };
+        
+        reader.onabort = function() {
+          console.error("❌ FileReader aborted");
+          reject("File read aborted");
         };
         
         reader.readAsArrayBuffer(file);
@@ -152,18 +168,19 @@
           return;
         }
         
+        console.log("Loading songs from IndexedDB...");
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
         const request = store.getAll();
         
         request.onsuccess = function(event) {
           const songs = event.target.result || [];
-          console.log("Loaded", songs.length, "songs from IndexedDB");
+          console.log("✅ Loaded", songs.length, "songs from IndexedDB");
           resolve(songs);
         };
         
         request.onerror = function(event) {
-          console.error("Error loading from IndexedDB:", event.target.error);
+          console.error("❌ Error loading from IndexedDB:", event.target.error);
           reject(event.target.error);
         };
       });
@@ -171,6 +188,7 @@
 
     // Convert ArrayBuffer back to File object
     function arrayBufferToFile(arrayBuffer, fileName, fileType) {
+      console.log("Converting ArrayBuffer to File:", fileName);
       const blob = new Blob([arrayBuffer], { type: fileType });
       return new File([blob], fileName, {
         type: fileType,
@@ -202,12 +220,128 @@
       });
     }
 
+    // Create a song list item
+    function createSongListItem(songName, file) {
+      const li = document.createElement("li");
+      li.textContent = songName;
+      
+      // Add double-click to delete
+      li.addEventListener("dblclick", async function(e) {
+        e.stopPropagation();
+        if (confirm(`Delete "${songName}"?`)) {
+          try {
+            await deleteSongFromDB(songName);
+            uploadedSongs = uploadedSongs.filter(s => s.name !== songName);
+            li.remove();
+            console.log("Deleted:", songName);
+          } catch (error) {
+            console.error("Failed to delete:", error);
+            alert("Failed to delete song.");
+          }
+        }
+      });
+      
+      // Add click to play
+      li.addEventListener("click", function() {
+        playSong(file);
+      });
+      
+      return li;
+    }
+
+    // Play a song
+    function playSong(file) {
+      console.log("Playing song:", file.name);
+      const audioPlayer = document.getElementById("audioPlayer");
+      const objectURL = URL.createObjectURL(file);
+      audioPlayer.src = objectURL;
+      audioPlayer.play();
+      
+      // Highlight playing song
+      document.querySelectorAll("#songList li").forEach(li => {
+        li.classList.remove("playing");
+        if (li.textContent === file.name) {
+          li.classList.add("playing");
+        }
+      });
+      
+      // Clean up URL when done
+      audioPlayer.addEventListener('ended', function cleanup() {
+        URL.revokeObjectURL(objectURL);
+        audioPlayer.removeEventListener('ended', cleanup);
+      }, { once: true });
+    }
+
+    // Handle file uploads
+    async function handleFiles(files) {
+      console.log("handleFiles called with", files.length, "file(s)");
+      
+      // REMOVE THE "NO SONGS UPLOADED YET" PLACEHOLDER IF IT EXISTS
+      if (songList.children.length === 1) {
+        const firstChild = songList.children[0];
+        if (firstChild.textContent === "No songs uploaded yet" || 
+            firstChild.textContent.includes("No songs") ||
+            firstChild.style.color === "#888") {
+          firstChild.remove();
+          console.log("Removed placeholder message");
+        }
+      }
+      
+      for (let file of files) {
+        if (!file.type.startsWith("audio/")) {
+          alert(`"${file.name}" is not an audio file. Skipped.`);
+          continue;
+        }
+        
+        console.log("Processing:", file.name, "type:", file.type, "size:", file.size);
+        
+        // Check if song already exists
+        if (uploadedSongs.some(s => s.name === file.name)) {
+          if (!confirm(`"${file.name}" already exists. Replace?`)) {
+            continue;
+          }
+          // Remove existing
+          await deleteSongFromDB(file.name);
+          uploadedSongs = uploadedSongs.filter(s => s.name !== file.name);
+          // Remove from UI
+          const existingLi = Array.from(songList.children).find(li => li.textContent === file.name);
+          if (existingLi) existingLi.remove();
+        }
+        
+        try {
+          // Save to IndexedDB
+          await saveSongToDB(file);
+          
+          // Add to memory
+          uploadedSongs.push({
+            name: file.name,
+            file: file
+          });
+          
+          // Add to UI
+          const li = createSongListItem(file.name, file);
+          songList.appendChild(li);
+          
+          console.log("✅ Successfully added:", file.name);
+          
+        } catch (error) {
+          console.error("❌ Failed to save file:", file.name, error);
+          if (error.name === 'QuotaExceededError') {
+            alert(`Failed to save "${file.name}". Your browser storage is full.`);
+          } else {
+            alert(`Failed to save "${file.name}". File might be too large.`);
+          }
+        }
+      }
+    }
+
     // Main application code
     document.addEventListener('DOMContentLoaded', async function() {
       const dropArea = document.getElementById("drop-area");
       const fileInput = document.getElementById("fileInput");
       const songList = document.getElementById("songList");
-      const audioPlayer = document.getElementById("audioPlayer");
+
+      console.log("DOM loaded, initializing...");
 
       try {
         // Initialize database
@@ -215,32 +349,51 @@
         
         // Load and display existing songs
         const savedSongs = await loadSongsFromDB();
+        console.log("Found", savedSongs.length, "saved songs");
         
-        savedSongs.forEach(songData => {
-          // Convert ArrayBuffer back to File
-          const file = arrayBufferToFile(songData.data, songData.name, songData.type);
-          
-          // Add to memory array
-          uploadedSongs.push({
-            name: songData.name,
-            file: file
+        // CLEAR THE LIST BEFORE ADDING SONGS
+        songList.innerHTML = '';
+        
+        if (savedSongs.length > 0) {
+          savedSongs.forEach(songData => {
+            console.log("Loading saved song:", songData.name);
+            // Convert ArrayBuffer back to File
+            const file = arrayBufferToFile(songData.data, songData.name, songData.type);
+            
+            // Add to memory array
+            uploadedSongs.push({
+              name: songData.name,
+              file: file
+            });
+            
+            // Create list item
+            const li = createSongListItem(songData.name, file);
+            songList.appendChild(li);
           });
-          
-          // Create list item
-          const li = createSongListItem(songData.name, file);
-          songList.appendChild(li);
-        });
-        
-        console.log("Total songs in memory:", uploadedSongs.length);
+          console.log("✅ Displayed", uploadedSongs.length, "songs");
+        } else {
+          console.log("ℹ️ No saved songs found");
+          // Only add placeholder if the list is completely empty
+          if (songList.children.length === 0) {
+            songList.innerHTML = '<li style="color:#888; font-style:italic;">No songs uploaded yet</li>';
+          }
+        }
         
       } catch (error) {
-        console.error("Failed to initialize:", error);
-        alert("Note: Songs won't be saved between page reloads due to database error.");
+        console.error("❌ Failed to initialize database:", error);
+        songList.innerHTML = '<li style="color:red;">Error loading songs. Please refresh.</li>';
       }
 
       // Event Listeners
-      dropArea.addEventListener("click", () => fileInput.click());
-      fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
+      dropArea.addEventListener("click", () => {
+        console.log("Drop area clicked");
+        fileInput.click();
+      });
+      
+      fileInput.addEventListener("change", (e) => {
+        console.log("File input changed");
+        handleFiles(e.target.files);
+      });
 
       dropArea.addEventListener("dragover", (e) => {
         e.preventDefault();
@@ -254,104 +407,11 @@
       dropArea.addEventListener("drop", (e) => {
         e.preventDefault();
         dropArea.classList.remove("highlight");
+        console.log("Files dropped");
         handleFiles(e.dataTransfer.files);
       });
-
-      // Handle file uploads
-      async function handleFiles(files) {
-        for (let file of files) {
-          if (!file.type.startsWith("audio/")) {
-            alert(`"${file.name}" is not an audio file. Skipped.`);
-            continue;
-          }
-          
-          // Check if song already exists
-          if (uploadedSongs.some(s => s.name === file.name)) {
-            if (!confirm(`"${file.name}" already exists. Replace?`)) {
-              continue;
-            }
-            // Remove existing
-            await deleteSongFromDB(file.name);
-            uploadedSongs = uploadedSongs.filter(s => s.name !== file.name);
-            // Remove from UI
-            const existingLi = Array.from(songList.children).find(li => li.textContent === file.name);
-            if (existingLi) existingLi.remove();
-          }
-          
-          try {
-            // Save to IndexedDB
-            await saveSongToDB(file);
-            
-            // Add to memory
-            uploadedSongs.push({
-              name: file.name,
-              file: file
-            });
-            
-            // Add to UI
-            const li = createSongListItem(file.name, file);
-            songList.appendChild(li);
-            
-            console.log("Successfully added:", file.name);
-            
-          } catch (error) {
-            console.error("Failed to save file:", file.name, error);
-            alert(`Failed to save "${file.name}". File might be too large.`);
-          }
-        }
-      }
-
-      // Create a song list item
-      function createSongListItem(songName, file) {
-        const li = document.createElement("li");
-        li.textContent = songName;
-        
-        // Add double-click to delete
-        li.addEventListener("dblclick", async function(e) {
-          e.stopPropagation();
-          if (confirm(`Delete "${songName}"?`)) {
-            try {
-              await deleteSongFromDB(songName);
-              uploadedSongs = uploadedSongs.filter(s => s.name !== songName);
-              li.remove();
-              console.log("Deleted:", songName);
-            } catch (error) {
-              console.error("Failed to delete:", error);
-              alert("Failed to delete song.");
-            }
-          }
-        });
-        
-        // Add click to play
-        li.addEventListener("click", function() {
-          playSong(file);
-        });
-        
-        return li;
-      }
-
-      // Play a song
-      function playSong(file) {
-        const objectURL = URL.createObjectURL(file);
-        audioPlayer.src = objectURL;
-        audioPlayer.play();
-        
-        // Highlight playing song
-        document.querySelectorAll("#songList li").forEach(li => {
-          li.classList.remove("playing");
-          if (li.textContent === file.name) {
-            li.classList.add("playing");
-          }
-        });
-        
-        // Clean up URL when done
-        audioPlayer.addEventListener('ended', function cleanup() {
-          URL.revokeObjectURL(objectURL);
-          audioPlayer.removeEventListener('ended', cleanup);
-        }, { once: true });
-      }
       
-      // Clear all songs (optional - for testing)
+      // Clear all songs (for testing)
       window.clearAllSongs = async function() {
         if (confirm("Delete ALL uploaded songs?")) {
           try {
@@ -363,6 +423,7 @@
               uploadedSongs = [];
               songList.innerHTML = '';
               console.log("All songs deleted");
+              alert("All songs deleted");
             };
           } catch (error) {
             console.error("Failed to clear songs:", error);
