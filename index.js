@@ -1,73 +1,54 @@
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
+const { execSync } = require("child_process");  // ADD THIS
+
+// KILL existing Node processes on port 8000 before starting
+try {
+    console.log("🔪 Killing existing processes on port 8000...");
+    execSync("pkill -f 'node.*8000' || true", { stdio: 'inherit' });
+    execSync("kill -9 $(lsof -t -i:8000) 2>/dev/null || true", { stdio: 'inherit' });
+} catch (e) {
+    // Ignore errors if no processes to kill
+}
+
 const app = express();
 
-// NEW CODE for database
-const sqlite3 = require('sqlite3').verbose();
+// Serve static files from CURRENT DIRECTORY
+app.use(express.static(__dirname));
 
-// Connect to SQLite database
-const db = new sqlite3.Database('./datasource.db', (err) => {
-    if (err) {
-        console.error(err.message);
-    }
-    console.log('Connected to the SQLite database.');
+// Basic routes
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// Handle GET request to '/data' endpoint
-app.get('/data', (req, res) => {
-    const sql = `SELECT * FROM favourite_wiki`;
-    
-    db.all(sql, [], (err, rows) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-        }
-        res.json(rows);
-    });
+app.get("/upload", (req, res) => {
+    res.sendFile(path.join(__dirname, "upload.html"));
 });
 
-// Serve static files from "public" directory
-app.use(express.static(path.join(__dirname, "public")));
-
-// ROUTES FOR YOUR EXISTING HTML PAGES
-app.get("/", function (req, res) {
-    res.sendFile(path.join(__dirname, "public/index.html"));
+app.get("/playlists", (req, res) => {
+    res.sendFile(path.join(__dirname, "playlists.html"));
 });
 
-app.get("/index.html", function (req, res) {
-    res.sendFile(path.join(__dirname, "public/index.html"));
+// PWA routes
+app.get('/manifest.json', (req, res) => {
+    res.sendFile(path.join(__dirname, 'manifest.json'));
 });
 
-app.get("/upload.html", function (req, res) {
-    res.sendFile(path.join(__dirname, "public/upload.html"));
+app.get('/sw.js', (req, res) => {
+    res.sendFile(path.join(__dirname, 'sw.js'));
 });
 
-app.get("/playlists.html", function (req, res) {
-    res.sendFile(path.join(__dirname, "public/playlists.html"));
-});
+// Use port 3000 to avoid conflicts
+const PORT = 3000;
 
-// PWA ROUTES - ADDED FOR PROGRESSIVE WEB APP
-app.get('/manifest.json', function (req, res) {
-    res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
+app.listen(PORT, () => {
+    console.log("=".repeat(60));
+    console.log(`✅ Server is running on http://localhost:${PORT}`);
+    console.log("");
+    console.log("🔗 Available Pages:");
+    console.log(`• Home: http://localhost:${PORT}/`);
+    console.log(`• Upload: http://localhost:${PORT}/upload`);
+    console.log(`• Playlists: http://localhost:${PORT}/playlists`);
+    console.log("=".repeat(60));
 });
-
-app.get('/sw.js', function (req, res) {
-    res.sendFile(path.join(__dirname, 'public', 'sw.js'));
-});
-
-// Optional: Redirect for any .html request to your existing pages
-app.get("/*.html", function (req, res) {
-    const requestedFile = req.path.substring(1); // Remove leading slash
-    
-    // List of your actual HTML files
-    const validPages = ["index.html", "upload.html", "playlists.html"];
-    
-    if (validPages.includes(requestedFile)) {
-        res.sendFile(path.join(__dirname, "public", requestedFile));
-    } else {
-        // Redirect to home if trying to access non-existent page
-        res.redirect("/");
-    }
-});
-
-app.listen(8000, () => console.log("Server is running on Port 8000, visit http://localhost:8000/ or http://127.0.0.1:8000 to access your website"));
