@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top 50 Songs Database</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- PWA Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#00fff7">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Music Library">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    <meta name="msapplication-TileColor" content="#00fff7">
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png">
+    
+    <style>
+        .database-section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .stats-card {
+            background: linear-gradient(145deg, #0a0a0a, #111111);
+            border: 1px solid #00fff7;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 0 15px rgba(0, 255, 247, 0.1);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            background: rgba(0, 255, 247, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 3px solid #00fff7;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #00fff7;
+            margin: 5px 0;
+        }
+        
+        .stat-label {
+            color: #aaa;
+            font-size: 14px;
+        }
+        
+        .songs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: #111;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .songs-table th {
+            background: #00fff7;
+            color: #000;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .songs-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .songs-table tr:hover {
+            background: rgba(0, 255, 247, 0.05);
+        }
+        
+        .songs-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .rank-badge {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            background: linear-gradient(145deg, #00fff7, #00aaa5);
+            color: #000;
+            border-radius: 50%;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        .genre-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            background: rgba(0, 255, 247, 0.1);
+            color: #00fff7;
+            border-radius: 20px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #00fff7;
+        }
+        
+        .error {
+            color: #ff4444;
+            padding: 20px;
+            background: rgba(255, 68, 68, 0.1);
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .success {
+            color: #44ff44;
+            padding: 20px;
+            background: rgba(68, 255, 68, 0.1);
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<div class="top-nav">
+    <button class="nav-button" onclick="window.location.href='/'">
+        &larr; Home
+    </button>
+    <div class="nav-right">
+        <button class="nav-button" onclick="window.location.href='/upload'">
+            Upload Songs
+        </button>
+        <button class="nav-button" onclick="window.location.href='/playlists'">
+            Playlists
+        </button>
+    </div>
+</div>
+
+<header>
+    <h1>Top 50 Songs Database</h1>
+    <p>Database operations with Billboard's top songs from Wikipedia</p>
+</header>
+
+<section class="database-section">
+    
+    <!-- Database Controls -->
+    <div class="controls">
+        <button id="insertBtn" class="cyber-button">
+            📥 Insert Top 50 Songs
+        </button>
+        <button id="refreshBtn" class="cyber-button">
+            🔄 Refresh Data
+        </button>
+        <button id="clearBtn" class="cyber-button" style="background: linear-gradient(145deg, #ff4444, #aa0000);">
+            🗑️ Clear All Songs
+        </button>
+        <button id="exportBtn" class="cyber-button">
+            📊 Export as JSON
+        </button>
+    </div>
+    
+    <!-- Status Messages -->
+    <div id="statusMessage"></div>
+    
+    <!-- Statistics -->
+    <div class="stats-card">
+        <h2>Database Statistics</h2>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value" id="totalSongs">0</div>
+                <div class="stat-label">Total Songs</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="topYear">2023</div>
+                <div class="stat-label">Year</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="uniqueArtists">0</div>
+                <div class="stat-label">Unique Artists</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="genresCount">0</div>
+                <div class="stat-label">Genres</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Songs Table -->
+    <div id="songsContainer">
+        <div class="loading">
+            <h3>Loading songs from database...</h3>
+            <p>Please wait while we fetch the data</p>
+        </div>
+    </div>
+    
+</section>
+
+<script>
+    // DOM Elements
+    const insertBtn = document.getElementById('insertBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const statusMessage = document.getElementById('statusMessage');
+    const songsContainer = document.getElementById('songsContainer');
+    const totalSongs = document.getElementById('totalSongs');
+    const topYear = document.getElementById('topYear');
+    const uniqueArtists = document.getElementById('uniqueArtists');
+    const genresCount = document.getElementById('genresCount');
+    
+    let songsData = [];
+    
+    // Show status message
+    function showStatus(message, type = 'info') {
+        statusMessage.innerHTML = `
+            <div class="${type}">
+                ${message}
+            </div>
+        `;
+        setTimeout(() => {
+            statusMessage.innerHTML = '';
+        }, 5000);
+    }
+    
+    // Load songs from database
+    async function loadSongs() {
+        try {
+            songsContainer.innerHTML = `
+                <div class="loading">
+                    <h3>Loading songs from database...</h3>
+                    <p>Please wait while we fetch the data</p>
+                </div>
+            `;
+            
+            const response = await fetch('/api/top-songs');
+            if (!response.ok) throw new Error('Failed to fetch songs');
+            
+            songsData = await response.json();
+            
+            if (songsData.length === 0) {
+                songsContainer.innerHTML = `
+                    <div class="loading">
+                        <h3>No songs in database</h3>
+                        <p>Click "Insert Top 50 Songs" to add data</p>
+                    </div>
+                `;
+                updateStats();
+                return;
+            }
+            
+            renderSongsTable();
+            updateStats();
+            
+        } catch (error) {
+            console.error('Error loading songs:', error);
+            songsContainer.innerHTML = `
+                <div class="error">
+                    <h3>Error loading songs</h3>
+                    <p>${error.message}</p>
+                </div>
+            `;
+        }
+    }
+    
+    // Render songs table
+    function renderSongsTable() {
+        let html = `
+            <h2>Top ${songsData.length} Songs</h2>
+            <div style="overflow-x: auto;">
+                <table class="songs-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Title</th>
+                            <th>Artist</th>
+                            <th>Year</th>
+                            <th>Genre</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        songsData.forEach(song => {
+            html += `
+                <tr>
+                    <td>
+                        <span class="rank-badge">${song.rank}</span>
+                    </td>
+                    <td><strong>${song.title}</strong></td>
+                    <td>${song.artist}</td>
+                    <td>${song.year}</td>
+                    <td>
+                        <span class="genre-tag">${song.genre}</span>
+                    </td>
+                    <td>${song.description || 'N/A'}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        songsContainer.innerHTML = html;
+    }
+    
+    // Update statistics
+    function updateStats() {
+        totalSongs.textContent = songsData.length;
+        
+        if (songsData.length > 0) {
+            // Find most common year
+            const yearCounts = {};
+            songsData.forEach(song => {
+                yearCounts[song.year] = (yearCounts[song.year] || 0) + 1;
+            });
+            const topYearValue = Object.keys(yearCounts).reduce((a, b) => 
+                yearCounts[a] > yearCounts[b] ? a : b
+            );
+            topYear.textContent = topYearValue;
+            
+            // Count unique artists
+            const uniqueArtistsSet = new Set(songsData.map(song => song.artist));
+            uniqueArtists.textContent = uniqueArtistsSet.size;
+            
+            // Count unique genres
+            const uniqueGenres = new Set(songsData.map(song => song.genre).filter(g => g));
+            genresCount.textContent = uniqueGenres.size;
+        }
+    }
+    
+    // Insert songs from Wikipedia
+   // In top-songs.html, update the insertSongs function to show source
+async function insertSongs() {
+    try {
+        insertBtn.disabled = true;
+        insertBtn.innerHTML = '🌐 Scraping Wikipedia...';
+        
+        const response = await fetch('/api/insert-top-songs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showStatus(`✅ ${result.message} (Source: ${result.source})`, 'success');
+            await loadSongs();
+        } else {
+            throw new Error(result.error || 'Failed to insert songs');
+        }
+        
+    } catch (error) {
+        console.error('Error inserting songs:', error);
+        showStatus(`❌ Error: ${error.message}`, 'error');
+    } finally {
+        insertBtn.disabled = false;
+        insertBtn.innerHTML = '📥 Insert Top 50 Songs';
+    }
+}
+    
+    // Clear all songs
+    async function clearSongs() {
+        if (!confirm('Are you sure you want to clear ALL songs from the database?')) {
+            return;
+        }
+        
+        try {
+            clearBtn.disabled = true;
+            clearBtn.innerHTML = '⏳ Clearing...';
+            
+            const response = await fetch('/api/clear-songs', {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showStatus('✅ All songs cleared from database', 'success');
+                songsData = [];
+                songsContainer.innerHTML = `
+                    <div class="loading">
+                        <h3>No songs in database</h3>
+                        <p>Click "Insert Top 50 Songs" to add data</p>
+                    </div>
+                `;
+                updateStats();
+            } else {
+                throw new Error(result.error || 'Failed to clear songs');
+            }
+            
+        } catch (error) {
+            console.error('Error clearing songs:', error);
+            showStatus(`❌ Error: ${error.message}`, 'error');
+        } finally {
+            clearBtn.disabled = false;
+            clearBtn.innerHTML = '🗑️ Clear All Songs';
+        }
+    }
+    
+    // Export as JSON
+    function exportSongs() {
+        if (songsData.length === 0) {
+            showStatus('❌ No songs to export', 'error');
+            return;
+        }
+        
+        const dataStr = JSON.stringify(songsData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `top-songs-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showStatus('✅ Songs exported as JSON file', 'success');
+    }
+    
+    // Event Listeners
+    insertBtn.addEventListener('click', insertSongs);
+    refreshBtn.addEventListener('click', loadSongs);
+    clearBtn.addEventListener('click', clearSongs);
+    exportBtn.addEventListener('click', exportSongs);
+    
+    // Load songs on page load
+    document.addEventListener('DOMContentLoaded', loadSongs);
+</script>
+
+</body>
+</html>
