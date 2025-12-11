@@ -171,10 +171,10 @@ app.delete('/api/clear-songs', (req, res) => {
 });
 
 // Page routes
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.get("/upload", (req, res) => res.sendFile(path.join(__dirname, "upload.html")));
-app.get("/playlists", (req, res) => res.sendFile(path.join(__dirname, "playlists.html")));
-app.get("/top-songs", (req, res) => res.sendFile(path.join(__dirname, "top-songs.html")));
+app.get("index.html", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
+app.get("upload.html", (req, res) => res.sendFile(path.join(__dirname, "upload.html")));
+app.get("playlists.html", (req, res) => res.sendFile(path.join(__dirname, "playlists.html")));
+app.get("top-songs.html", (req, res) => res.sendFile(path.join(__dirname, "top-songs.html")));
 
 app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
 app.get('/sw.js', (req, res) => res.sendFile(path.join(__dirname, 'sw.js')));
