@@ -6,13 +6,17 @@ const sqlite3 = require('sqlite3').verbose();
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-// KILL existing Node processes on port 8000 before starting
+
+const PORT = 3000;
+
+
 try {
-    console.log("🔪 Killing existing processes on port 8000...");
-    execSync("pkill -f 'node.*8000' || true", { stdio: 'inherit' });
-    execSync("kill -9 $(lsof -t -i:8000) 2>/dev/null || true", { stdio: 'inherit' });
+    console.log(`🔪 Killing existing processes on port ${PORT}...`);
+    execSync(`pkill -f 'node.*${PORT}' || true`, { stdio: 'inherit' });
+    execSync(`kill -9 $(lsof -t -i:${PORT}) 2>/dev/null || true`, { stdio: 'inherit' });
 } catch (e) {
     // Ignore errors if no processes to kill
+    console.log("No processes to kill, or kill commands not available on this system");
 }
 
 const app = express();
@@ -267,7 +271,7 @@ app.get('/sw.js', (req, res) => {
 });
 
 // Use port 3000 to avoid conflicts
-const PORT = 3000;
+
 
 app.listen(PORT, () => {
     console.log("=".repeat(60));
