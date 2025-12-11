@@ -1,5 +1,7 @@
 How to use
--type node index.js in terminal bash
+-Type in node server.js
+-if needed scroll up to find home page
+-hover over http://localhost:3000/ the if on mac command click the link if windows control click link
 -Upload music by dragging files to the Upload page
 -Create playlists on the Playlists page by naming them and adding songs
 -Play songs by clicking on them - audio player appears at bottom
