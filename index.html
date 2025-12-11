@@ -4,12 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-    <title>Music Library</title>
-
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <title>Music Library</title>
+    <title>Music Library PWA</title>
     
     <!-- PWA Tags -->
     <link rel="manifest" href="/manifest.json">
@@ -20,59 +15,339 @@
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
     <meta name="msapplication-TileColor" content="#00fff7">
     <meta name="msapplication-TileImage" content="/icons/icon-144x144.png">
+    
+    <!-- PWA Script -->
+    <script src="/pwa.js" defer></script>
+    
+    <style>
+        .pwa-badge {
+            display: inline-block;
+            background: linear-gradient(145deg, #00fff7, #00aaa5);
+            color: black;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
+        .offline-badge {
+            display: inline-block;
+            background: linear-gradient(145deg, #ffd700, #ffaa00);
+            color: black;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
+        .new-feature {
+            border: 2px solid #00fff7;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 10px rgba(0, 255, 247, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(0, 255, 247, 0.6); }
+            100% { box-shadow: 0 0 10px rgba(0, 255, 247, 0.3); }
+        }
+        
+        .database-badge {
+            display: inline-block;
+            background: linear-gradient(145deg, #aa00ff, #7700cc);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        
+        .tech-item {
+            background: rgba(0, 255, 247, 0.1);
+            padding: 8px 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 247, 0.3);
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
 
 <header class="app-header">
-    <h1>Music Library</h1>
-    <p>Your personal music collection</p>
+    <h1>Music Library <span class="pwa-badge">PWA</span></h1>
+    <p>Your personal music collection that works everywhere</p>
+    <div class="tech-stack">
+        <span class="tech-item">Progressive Web App</span>
+        <span class="tech-item">Works Offline</span>
+        <span class="tech-item">SQLite Database</span>
+        <span class="tech-item">IndexedDB</span>
+        <span class="tech-item">Wikipedia Integration</span>
+    </div>
 </header>
 
 <section class="instructions-section">
-    <h2>Welcome to Your Music Library</h2>
+    <h2>🎵 Welcome to Your Advanced Music Library</h2>
     
     <div class="feature-cards">
         <div class="feature-card">
-            <h3>🎵 Upload Music</h3>
-            <p>Add your own audio files to your personal collection. Supports MP3, WAV, and more.</p>
+            <h3>🎵 Upload Music <span class="offline-badge">OFFLINE</span></h3>
+            <p>Add your own audio files directly in your browser. Files are stored locally using IndexedDB and work completely offline.</p>
+            <small><strong>Supports:</strong> MP3, WAV, OGG, M4A, FLAC</small>
         </div>
+        
         <div class="feature-card">
-            <h3>📋 Create Playlists</h3>
-            <p>Organize your songs into custom playlists for different moods and occasions.</p>
+            <h3>📋 Smart Playlists <span class="offline-badge">OFFLINE</span></h3>
+            <p>Create custom playlists that sync between devices. Mix your uploaded songs with Billboard's Top 50 hits.</p>
+            <small><strong>Features:</strong> Drag & drop, playlist playback, smart suggestions</small>
         </div>
+        
+        <div class="feature-card new-feature">
+            <h3>⭐ Top 50 Database <span class="database-badge">SQL</span></h3>
+            <p>Access Billboard's Top 50 songs with real-time Wikipedia scraping. Full SQL database with search, filter, and export.</p>
+            <small><strong>Includes:</strong> Rank, Artist, Year, Genre, Description</small>
+        </div>
+        
         <div class="feature-card">
-            <h3>🎧 Play Anywhere</h3>
-            <p>Access your music from any device with a browser. Your music stays in your browser.</p>
+            <h3>🌐 Progressive Web App <span class="pwa-badge">PWA</span></h3>
+            <p>Install as a native app on your phone or computer. Works offline, sends push notifications, and loads instantly.</p>
+            <small><strong>Features:</strong> Install to home screen, offline access, fast loading</small>
+        </div>
+        
+        <div class="feature-card">
+            <h3>🔍 Smart Search <span class="offline-badge">AI-Powered</span></h3>
+            <p>Search across your uploaded songs AND Billboard's Top 50 database simultaneously. Intelligent suggestions as you type.</p>
+            <small><strong>Search by:</strong> Title, Artist, Genre, Year</small>
+        </div>
+        
+        <div class="feature-card">
+            <h3>📱 Cross-Platform <span class="pwa-badge">RESPONSIVE</span></h3>
+            <p>Perfectly optimized for mobile, tablet, and desktop. Install on iOS, Android, Windows, or macOS.</p>
+            <small><strong>Design:</strong> Mobile-first, touch-friendly, dark mode</small>
         </div>
     </div>
     
-    <h2>How to Use This Website</h2>
+    <h2>🚀 How It Works</h2>
+    <div class="feature-cards">
+        <div class="feature-card" style="text-align: center;">
+            <h3>1. Upload & Store</h3>
+            <p>Drag & drop your music files. They're encrypted and stored locally in your browser using IndexedDB.</p>
+            <div style="font-size: 24px;">📁 → 🗄️ → 🔒</div>
+        </div>
+        
+        <div class="feature-card" style="text-align: center;">
+            <h3>2. Organize & Play</h3>
+            <p>Create playlists, mix songs, and enjoy seamless playback with full audio controls.</p>
+            <div style="font-size: 24px;">🎵 + 🎵 = 📋 → ▶️</div>
+        </div>
+        
+        <div class="feature-card" style="text-align: center;">
+            <h3>3. Discover & Explore</h3>
+            <p>Access Billboard's Top 50 through Wikipedia scraping. Add hits to your playlists.</p>
+            <div style="font-size: 24px;">🌐 → 🗃️ → ⭐</div>
+        </div>
+    </div>
+    
+    <h2>🔧 Technology Stack</h2>
+    <div class="storage-info">
+        <h3>Frontend</h3>
+        <ul>
+            <li><strong>HTML5/CSS3/JavaScript</strong> - Modern web standards</li>
+            <li><strong>IndexedDB</strong> - Client-side database for your music</li>
+            <li><strong>Service Workers</strong> - Offline functionality & caching</li>
+            <li><strong>PWA Manifest</strong> - Install as native app</li>
+        </ul>
+        
+        <h3>Backend</h3>
+        <ul>
+            <li><strong>Node.js + Express</strong> - Fast server framework</li>
+            <li><strong>SQLite Database</strong> - Billboard Top 50 songs with full CRUD operations</li>
+            <li><strong>Web Scraping</strong> - Real-time data from Wikipedia using Axios & Cheerio</li>
+            <li><strong>RESTful API</strong> - Complete API for database operations</li>
+        </ul>
+        
+        <h3>Database Operations</h3>
+        <ul>
+            <li><strong>CREATE TABLE</strong> - Structured schema for songs</li>
+            <li><strong>INSERT</strong> - Add Wikipedia-scraped data</li>
+            <li><strong>SELECT</strong> - Query with search, filters, sorting</li>
+            <li><strong>DELETE/CLEAR</strong> - Full database management</li>
+            <li><strong>EXPORT</strong> - Download data as JSON</li>
+        </ul>
+    </div>
+    
+    <h2>📖 How to Use This Website</h2>
     <ol class="instructions-list">
-        <li>Go to <strong>Upload Songs</strong> to add your music files to the library.</li>
-        <li>Click on any uploaded song to play it instantly.</li>
-        <li>Create and manage your own playlists in the <strong>Playlists</strong> section.</li>
-        <li>Use the bottom navigation to quickly move between pages.</li>
-        <li>Your music is stored locally in your browser - no account needed!</li>
+        <li><strong>Upload Songs</strong> - Drag & drop audio files to build your personal library</li>
+        <li><strong>Create Playlists</strong> - Organize songs into custom playlists for different moods</li>
+        <li><strong>Top 50 Database</strong> - Explore Billboard hits scraped from Wikipedia</li>
+        <li><strong>Smart Search</strong> - Search across both your library and Top 50 database</li>
+        <li><strong>Install as PWA</strong> - Click "Install" in your browser to add to home screen</li>
+        <li><strong>Go Offline</strong> - Once loaded, works completely without internet</li>
     </ol>
     
-    <div class="storage-info">
-        <h3>📊 About Storage</h3>
-        <p>Your songs are stored in your browser's local storage. This means:</p>
+    <div class="storage-info new-feature">
+        <h3>🔐 Privacy & Security</h3>
+        <p>Your data stays on your device - we don't store anything on our servers:</p>
         <ul>
-            <li>✅ No login required - completely private</li>
-            <li>✅ Works offline after initial upload</li>
-            <li>✅ Accessible only from this browser</li>
-            <li>⚠️ Clearing browser data will remove your songs</li>
+            <li>✅ <strong>No Registration Required</strong> - Completely anonymous</li>
+            <li>✅ <strong>Local Storage Only</strong> - Music stays in your browser</li>
+            <li>✅ <strong>Encrypted Storage</strong> - Files are stored securely</li>
+            <li>✅ <strong>No Tracking</strong> - We don't collect any personal data</li>
+            <li>✅ <strong>Offline First</strong> - Works without internet connection</li>
+            <li>⚠️ <strong>Browser Data</strong> - Clearing browser cache will remove your music</li>
         </ul>
+    </div>
+    
+    <div class="storage-info">
+        <h3>⚡ Performance Features</h3>
+        <ul>
+            <li><strong>Instant Loading</strong> - Service Worker caches all pages</li>
+            <li><strong>Background Sync</strong> - Uploads continue even if you go offline</li>
+            <li><strong>Push Notifications</strong> - Get updates about new features</li>
+            <li><strong>Responsive Design</strong> - Perfect on any screen size</li>
+            <li><strong>Fast Database</strong> - SQLite queries return in milliseconds</li>
+            <li><strong>Smart Caching</strong> - Frequently played songs load instantly</li>
+        </ul>
+    </div>
+    
+    <div style="text-align: center; margin: 40px 0; padding: 20px; background: rgba(0, 255, 247, 0.05); border-radius: 15px;">
+        <h3>Ready to Start?</h3>
+        <p>Begin by uploading your music or exploring the Top 50 Billboard hits!</p>
+        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px; flex-wrap: wrap;">
+            <button onclick="window.location.href='/upload'" class="cyber-button" style="padding: 12px 25px;">
+                🎵 Upload Your Music
+            </button>
+            <button onclick="window.location.href='/top-songs'" class="cyber-button" 
+                    style="background: linear-gradient(145deg, #ffd700, #ffaa00); color: black; padding: 12px 25px;">
+                ⭐ Explore Top 50 Songs
+            </button>
+            <button onclick="window.location.href='/playlists'" class="cyber-button" style="padding: 12px 25px;">
+                📋 Create Playlists
+            </button>
+        </div>
     </div>
 </section>
 
 <div class="bottom-nav">
-    <a href="/"><button class="active">Home</button></a>
-    <a href="/upload"><button>Upload Songs</button></a>  
-    <a href="/playlists"><button>Playlists</button></a>
-    <a href="/top-songs"><button>Top 50 Songs</button></a>
+    <a href="/"><button class="active">🏠 Home</button></a>
+    <a href="/upload"><button>📤 Upload</button></a>  
+    <a href="/playlists"><button>📋 Playlists</button></a>
+    <a href="/top-songs"><button>⭐ Top 50</button></a>
 </div>
+
+<script>
+    // PWA Installation Prompt
+    let deferredPrompt;
+    
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Show install button if not already installed
+        if (!window.matchMedia('(display-mode: standalone)').matches) {
+            setTimeout(() => {
+                showInstallPrompt();
+            }, 3000);
+        }
+    });
+    
+    function showInstallPrompt() {
+        const installDiv = document.createElement('div');
+        installDiv.innerHTML = `
+            <div style="
+                position: fixed;
+                bottom: 100px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(145deg, #00fff7, #00aaa5);
+                color: black;
+                padding: 15px 25px;
+                border-radius: 15px;
+                box-shadow: 0 5px 25px rgba(0, 255, 247, 0.3);
+                z-index: 1000;
+                text-align: center;
+                max-width: 90%;
+                animation: slideUp 0.5s ease;
+            ">
+                <h4 style="margin: 0 0 10px 0;">📱 Install Music Library</h4>
+                <p style="margin: 0 0 15px 0; font-size: 14px;">Install as app for offline access & faster loading</p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="installApp()" style="
+                        background: black;
+                        color: #00fff7;
+                        border: none;
+                        padding: 8px 20px;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        font-weight: bold;
+                    ">Install Now</button>
+                    <button onclick="this.parentElement.parentElement.remove()" style="
+                        background: transparent;
+                        color: black;
+                        border: 1px solid black;
+                        padding: 8px 20px;
+                        border-radius: 10px;
+                        cursor: pointer;
+                    ">Later</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(installDiv);
+        
+        // Auto-remove after 15 seconds
+        setTimeout(() => {
+            if (installDiv.parentNode) {
+                installDiv.remove();
+            }
+        }, 15000);
+    }
+    
+    async function installApp() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            deferredPrompt = null;
+        }
+    }
+    
+    // Check if app is already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        console.log('App is installed and running in standalone mode');
+    }
+    
+    // Show offline status
+    window.addEventListener('online', () => {
+        console.log('You are online!');
+    });
+    
+    window.addEventListener('offline', () => {
+        console.log('You are offline! App will still work.');
+    });
+    
+    // Check service worker registration
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+            if (registrations.length > 0) {
+                console.log('✅ Service Worker registered for offline functionality');
+            }
+        });
+    }
+</script>
 
 </body>
 </html>
